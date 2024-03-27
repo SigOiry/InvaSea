@@ -1,0 +1,54 @@
+---
+title: "Spectra_Processing"
+author: "Simon Oiry"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r Library}
+library(tidyverse)
+```
+
+```{r data opening}
+
+df <-  read_table("Data/CSV/all_spectra.csv")
+
+df_long <- df %>% 
+  pivot_longer(-Wavelength, names_to = "Name",values_to = "ref") %>% 
+  mutate(Name = gsub(".asd","",Name),
+         sample = as.numeric(gsub("\\D", "", Name)),
+         dataset_Name = gsub("[[:digit:]]","",Name) %>% 
+           gsub("-","",.))
+
+df_sum<- df_long %>% 
+  group_by(dataset_Name, Wavelength) %>% 
+  reframe(mean = mean(ref),
+          sd = sd(ref))
+```
+
+
+```{r plot_sum}
+df_sum %>% 
+ggplot() + 
+  geom_line(aes(x = Wavelength, y = mean, color = dataset_Name))+
+  geom_ribbon(aes(x = Wavelength, ymin = mean-sd, ymax = mean + sd, color = dataset_Name, fill = dataset_Name), alpha = 0.3)+
+  facet_wrap(~dataset_Name)
+
+```
+
+
+```{r }
+
+df_VIE<- df_long %>% 
+  filter(dataset_Name == "GRAVIE")
+
+df_VIE %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+ggplot()+
+  geom_line(aes(x = Wavelength, y = ref, group = Name))
+
+```
+

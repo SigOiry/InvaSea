@@ -2,13 +2,15 @@
 title: "Spectra_Processing"
 author: "Simon Oiry"
 format: html
-editor: visual
+editor: source
 editor_options: 
   chunk_output_type: console
 ---
 
 ```{r Library}
 library(tidyverse)
+library(hsdar)
+library(Utilities.Package)
 ```
 
 ```{r data opening}
@@ -28,7 +30,6 @@ df_sum<- df_long %>%
           sd = sd(ref))
 ```
 
-
 ```{r plot_sum}
 df_sum %>% 
 ggplot() + 
@@ -38,11 +39,10 @@ ggplot() +
 
 ```
 
-
-```{r }
+```{r VIE}
 
 df_VIE<- df_long %>% 
-  filter(dataset_Name == "GRAVIE")
+  dplyr::filter(dataset_Name == "GRAVIE")
 
 df_VIE %>% 
   dplyr::filter(Wavelength >= 400,
@@ -50,5 +50,75 @@ df_VIE %>%
 ggplot()+
   geom_line(aes(x = Wavelength, y = ref, group = Name))
 
-```
 
+df_VIE_wide <- df_VIE %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+  dplyr::select(-c(sample,dataset_Name)) %>% 
+  pivot_wider(names_from = "Name", values_from = "ref")
+  
+
+wv <- as.numeric(df_VIE_wide$Wavelength)
+
+speclib_vie <- df_VIE_wide %>% 
+  dplyr::select(-Wavelength) %>% 
+  as.matrix()
+
+spectra_dist <- data.frame(spectra = names(df_VIE_wide)[-1],
+                           distance = NA)
+
+for(i in 2:ncol(speclib_vie)){
+  
+  ref <- speclib(speclib_vie[,i-1], wv)
+  sp <- speclib(speclib_vie[,i], wv)
+  
+  spectra_dist$distance[i] <- as.numeric(sam(ref,sp))
+}
+
+spectra_dist$ID <- as.character(c(1:nrow(spectra_dist)))
+
+
+spectra_dist %>% 
+  slice(1:200) %>% 
+ggplot()+
+  geom_bar(aes(x = ID, y = distance),stat="identity")
+
+
+df_VIE %>% 
+  dplyr::filter(Name == "GRA-VIE-00009" | Name == "GRA-VIE-00010") %>% 
+ggplot()+
+  geom_line(aes(x = Wavelength, y = ref, color = Name))
+
+
+spectlib_all <- speclib(speclib_vie, wv)
+
+sam <- dist.speclib(spectlib_all, method = "sam")
+
+nMDS <- MASS::isoMDS(sam,maxit = 1000,trace=FALSE) 
+
+mds_df <- nMDS$points %>% 
+  as_tibble()  %>%
+  dplyr::rename(x=V1,y=V2) %>% 
+  mutate(Spectra = names(df_VIE_wide)[-1],
+         ID = c(1:nrow(mds_df)))
+
+p = hclust(sam, method = "complete")
+
+mds_df<-mds_df %>% 
+  mutate(clust = cutree(p, k = length(names(df_VIE_wide)[-1])/10)) %>% 
+  rename(x_nMDS = "x",
+         y_nMDS = "y")
+
+
+df_VIE_final <-  df_VIE %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+  left_join(mds_df, by = c("Name" = "Spectra"))
+
+
+df_VIE_final %>% 
+  dplyr::filter(clust == 87) %>% 
+  ggplot()+
+  geom_line(aes(x = Wavelength, y = ref, color = Name))
+
+```

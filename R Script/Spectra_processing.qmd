@@ -131,7 +131,9 @@ df_Ber_long <- df %>%
          Spectra = as.numeric(gsub("\\D", "", Name)),
          dataset_Name = gsub("[[:digit:]]","",Name) %>% 
            gsub("-","",.)) %>% 
-  dplyr::filter(str_detect(dataset_Name, "BER"))
+  dplyr::filter(str_detect(dataset_Name, "BER"),
+                Wavelength >= 400,
+                Wavelength <= 950) 
 
 
 Notebook_BER <- read.delim("Data/Notebook/Sampling_Notebook_BER.txt")
@@ -145,12 +147,12 @@ for(i in 1:nrow(Notebook_BER)){
            Letter = Notebook_BER$Letter[i],
            Obs = Notebook_BER$Obs[i])
   
-if(i == 1){
-  output_BER <- a
-}  else{
-  output_BER <- output_BER %>% 
-    rbind(a)
-}
+  if(i == 1){
+    output_BER <- a
+  }  else{
+    output_BER <- output_BER %>% 
+      rbind(a)
+  }
   
 }
 
@@ -183,7 +185,55 @@ for(i in 1:length(unique(output_BER$Sample))){
   
   ggsave(paste0("Plot/BER/RAW/Sample",unique(sp$Sample),".jpg" ), plot, width = 10, height = 10, dpi = 200)
 
-  }
+}
+
+
+####  STD 
+
+df_BER_STD <- output_BER %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+  group_by(Name) %>% 
+  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+          Wavelength = Wavelength,
+          ref = ref,
+          Spectra = Spectra,
+          dataset_Name = dataset_Name,
+          Sample = Sample,
+          Letter = Letter,
+          Obs = Obs)
+
+
+for(i in 1:length(unique(df_BER_STD$Sample))){
+  
+  sp_STD <- df_BER_STD %>% 
+   dplyr::filter(Sample == unique(output_BER$Sample)[i]) %>% 
+    mutate(Letter = case_when(Letter == "A" ~ "Sparse on table",
+                              Letter == "B" ~ "Bare Sediment",
+                              Letter == "C" ~ "Sparse on Sediment",
+                              Letter == "D" ~ "High density"))
+  
+  plot <- ggplot(sp_STD)+
+    geom_line(aes(x = Wavelength, y = STD, color = Letter, group = Name))+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
+              size = 5, hjust = 0)+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.13, label = paste0("Specie: ", unique(Obs))),
+              size = 5, hjust = 0)+
+    scale_color_manual(values = c("brown", "red","orange", "grey60"))+
+    xlab("Wv (nm)")+
+    ylab("STD Reflectance")+
+    theme_Bede()+
+    theme(axis.text.x = element_text(size = 15),
+          axis.text.y = element_text(size = 15),
+          legend.position = "top", 
+          legend.key.width = unit(1,"cm"),
+          legend.key.height = unit(3,"mm"))
+  
+  ggsave(paste0("Plot/BER/STD/Sample",unique(sp_STD$Sample),"_STD.jpg" ), plot, width = 10, height = 10, dpi = 200)
+
+}
+
+
 ```
 
 ```{r VIE}
@@ -214,19 +264,23 @@ for(i in 1:nrow(Notebook_VIE)){
 for(i in 1:length(unique(output_VIE$Sample))){
   
   sp <- output_VIE %>% 
-   dplyr::filter(Sample == unique(output_VIE$Sample)[i]) %>% 
-    mutate(Letter = case_when(Letter == "A" ~ "High density",
-                              # Letter == "B" ~ "Bare Sediment",
-                              Letter == "B" ~ "Sparse on table",
-                              Letter == "C" ~ "Sparse on Sediment"))
+   dplyr::filter(Sample == unique(output_VIE$Sample)[i]) 
+    # mutate(Letter = case_when(Letter == "A" ~ "High density",
+    #                           # Letter == "B" ~ "Bare Sediment",
+    #                           Letter == "B" ~ "Sparse on table",
+    #                           Letter == "C" ~ "Sparse on Sediment",
+    #                           Letter == "D" ~ "NA",
+    #                           Letter == "E" ~ "Sediment"))
   
   plot <- ggplot(sp)+
-    geom_line(aes(x = Wavelength, y = ref, color = Letter, group = Name))+
+    geom_line(aes(x = Wavelength, y = ref, color = as.factor(Letter), group = Name))+
     geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
               size = 5, hjust = 0)+
     geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.13, label = paste0("Specie: ", unique(Obs))),
               size = 5, hjust = 0)+
-    scale_color_manual(values = c("brown", "red","orange", "grey60"))+
+    scale_color_manual(values = c( "red","grey60","orange","green","brown" ),
+                       breaks = c("A","B","C","D","E"), 
+                       labels = c("High density","Sparse on Sediment","Sparse on table ","NA","Sediment"))+
     xlab("Wv (nm)")+
     ylab("Reflectance")+
     theme_Bede()+

@@ -11,6 +11,8 @@ editor_options:
 library(tidyverse)
 library(hsdar)
 library(Utilities.Package)
+library(terra)
+library(tidyterra)
 ```
 
 ```{r data opening}
@@ -261,6 +263,9 @@ for(i in 1:nrow(Notebook_VIE)){
   
 }
 
+
+write.csv(output_VIE, "Data/CSV/RAW_VIE_Spectra.csv")
+
 for(i in 1:length(unique(output_VIE$Sample))){
   
   sp <- output_VIE %>% 
@@ -272,23 +277,61 @@ for(i in 1:length(unique(output_VIE$Sample))){
     #                           Letter == "D" ~ "NA",
     #                           Letter == "E" ~ "Sediment"))
   
+  
+  
+  
   plot <- ggplot(sp)+
     geom_line(aes(x = Wavelength, y = ref, color = as.factor(Letter), group = Name))+
-    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
+    geom_text(aes(x = 850, y = 0.68, label = paste0("Sample: ", unique(Sample))),
               size = 5, hjust = 0)+
-    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.13, label = paste0("Specie: ", unique(Obs))),
+    geom_text(aes(x = 850, y = 0.65, label = paste0("Specie: ", unique(Obs))),
               size = 5, hjust = 0)+
-    scale_color_manual(values = c( "red","grey60","orange","green","brown" ),
-                       breaks = c("A","B","C","D","E"), 
-                       labels = c("High density","Sparse on Sediment","Sparse on table ","NA","Sediment"))+
+    scale_color_manual(values = c( "red","orange","orange3","yellow3","yellow4","brown", "grey30","grey40","grey50" ),
+                       breaks = c("A","B","C","D","E","F","G","H","I"), 
+                       labels = c("High density","Sparse on table1","Sparse on table2","Sparse on Sediment1","Sparse on Sediment2","Sediment", "Fucus1", "Fucus2", "Fucus3"))+
     xlab("Wv (nm)")+
     ylab("Reflectance")+
+    ylim(c(0,0.7))+
     theme_Bede()+
+    labs(color = " ")+
     theme(axis.text.x = element_text(size = 15),
           axis.text.y = element_text(size = 15),
           legend.position = "top", 
           legend.key.width = unit(1,"cm"),
           legend.key.height = unit(3,"mm"))
+  
+  if(file.exists(paste0("Data/Pictures/VIE/Lab/VIE",unique(sp$Sample),".jpg"))){
+    img<-rast(paste0("Data/Pictures/VIE/Lab/VIE",unique(sp$Sample),".jpg"))
+    
+    
+    img_plot<-ggplot()+
+      geom_spatraster_rgb(data = img)+
+      coord_equal()+
+      scale_x_continuous(expand = c(0,0))+
+      scale_y_continuous(expand = c(0,0))+
+      theme_void()
+    
+    plot <- plot +
+      annotation_custom(ggplotGrob(img_plot), xmin = 400, xmax = 670, ymin = 0.4, ymax = 0.72)
+    
+  }else{
+    if(unique(sp$Obs == "Fucus sp.")){
+     img<-rast("Data/Pictures/VIE/Lab/fucus.jpg")
+    
+    
+    img_plot<-ggplot()+
+      geom_spatraster_rgb(data = img)+
+      coord_equal()+
+      scale_x_continuous(expand = c(0,0))+
+      scale_y_continuous(expand = c(0,0))+
+      theme_void()
+    
+    plot <- plot +
+      annotation_custom(ggplotGrob(img_plot), xmin = 400, xmax = 670, ymin = 0.4, ymax = 0.72) 
+    }
+      
+    
+    }
   
   ggsave(paste0("Plot/VIE/RAW/Sample",unique(sp$Sample),".jpg" ), plot, width = 10, height = 10, dpi = 200)
 

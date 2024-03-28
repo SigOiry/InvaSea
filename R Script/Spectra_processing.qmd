@@ -335,7 +335,204 @@ for(i in 1:length(unique(output_VIE$Sample))){
   
   ggsave(paste0("Plot/VIE/RAW/Sample",unique(sp$Sample),".jpg" ), plot, width = 10, height = 10, dpi = 200)
 
+}
+
+
+
+####  STD 
+
+df_VIE_STD <- output_VIE %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+  group_by(Name) %>% 
+  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+          Wavelength = Wavelength,
+          ref = ref,
+          Spectra = Spectra,
+          dataset_Name = dataset_Name,
+          Sample = Sample,
+          Letter = Letter,
+          Obs = Obs)
+
+
+for(i in 1:length(unique(df_VIE_STD$Sample))){
+  
+  sp_STD <- df_VIE_STD %>% 
+   dplyr::filter(Sample == unique(output_VIE$Sample)[i])
+  
+  plot <- ggplot(sp_STD)+
+    geom_line(aes(x = Wavelength, y = STD, color = Letter, group = Name))+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
+              size = 5, hjust = 0)+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.13, label = paste0("Specie: ", unique(Obs))),
+              size = 5, hjust = 0)+
+    scale_color_manual(values = c( "red","orange","orange3","yellow3","yellow4","brown", "grey30","grey40","grey50" ),
+                       breaks = c("A","B","C","D","E","F","G","H","I"), 
+                       labels = c("High density","Sparse on table1","Sparse on table2","Sparse on Sediment1","Sparse on Sediment2","Sediment", "Fucus1", "Fucus2", "Fucus3"))+
+    xlab("Wv (nm)")+
+    ylab("STD Reflectance")+
+    theme_Bede()+
+    theme(axis.text.x = element_text(size = 15),
+          axis.text.y = element_text(size = 15),
+          legend.position = "top", 
+          legend.key.width = unit(1,"cm"),
+          legend.key.height = unit(3,"mm"))
+  
+  ggsave(paste0("Plot/VIE/STD/Sample",unique(sp_STD$Sample),"_STD.jpg" ), plot, width = 10, height = 10, dpi = 200)
+
+}
+
+
+```
+
+```{r VANNE}
+df_VAN_long<- df_long %>% 
+  dplyr::filter(dataset_Name == "GRA-VAN",
+                Wavelength >= 400,
+                Wavelength <= 950)
+
+
+Notebook_VAN <- read.delim("Data/Notebook/Sampling_Notebook_VAN.txt")
+
+for(i in 1:nrow(Notebook_VAN)){
+  
+  a <- df_VAN_long %>% 
+    dplyr::filter(Spectra %in% c(Notebook_VAN$Start[i]:Notebook_VAN$End[i])) %>% 
+    mutate(Sample = Notebook_VAN$Sample[i],
+           Letter = Notebook_VAN$Letter[i],
+           Obs = as.character(Notebook_VAN$Obs[i]))
+  
+  if(i == 1){
+    output_VAN <- a
+  }  else{
+    output_VAN <- output_VAN %>% 
+      rbind(a)
   }
+  
+}
+
+output_VAN <- output_VAN %>% 
+  dplyr::filter(Name != "GRA-VAN00810")
+
+write.csv(output_VAN, "Data/CSV/RAW_VAN_Spectra.csv")
+
+for(i in 1:length(unique(output_VAN$Sample))){
+  
+  sp <- output_VAN %>% 
+   dplyr::filter(Sample == unique(output_VAN$Sample)[i]) 
+    # mutate(Letter = case_when(Letter == "A" ~ "High density",
+    #                           # Letter == "B" ~ "Bare Sediment",
+    #                           Letter == "B" ~ "Sparse on table",
+    #                           Letter == "C" ~ "Sparse on Sediment",
+    #                           Letter == "D" ~ "NA",
+    #                           Letter == "E" ~ "Sediment"))
+  
+  
+  unique(sp$Name)
+  
+  plot <- ggplot(sp)+
+    geom_line(aes(x = Wavelength, y = ref, color = as.factor(Letter), group = Name))+
+    geom_text(aes(x = 850, y = 0.68, label = paste0("Sample: ", unique(Sample))),
+              size = 5, hjust = 0)+
+    geom_text(aes(x = 850, y = 0.65, label = paste0("Specie: ", unique(Obs))),
+              size = 5, hjust = 0)+
+    scale_color_manual(values = c("grey30","orange","red", "green4", "red1", "red4"),
+                       breaks = c("A","B","C","D","E","F"), 
+                       labels = c("Sparse on Table","Sparse on Sediment","High density", "Green algae", "Red Algae1", "Red Algae2"))+
+    xlab("Wv (nm)")+
+    ylab("Reflectance")+
+    ylim(c(0,0.7))+
+    theme_Bede()+
+    labs(color = " ")+
+    theme(axis.text.x = element_text(size = 15),
+          axis.text.y = element_text(size = 15),
+          legend.position = "top", 
+          legend.key.width = unit(1,"cm"),
+          legend.key.height = unit(3,"mm"))
+  
+  if(file.exists(paste0("Data/Pictures/VAN/Lab/VAN",unique(sp$Sample),".jpg"))){
+    img<-rast(paste0("Data/Pictures/VAN/Lab/VAN",unique(sp$Sample),".jpg"))
+    
+    
+    img_plot<-ggplot()+
+      geom_spatraster_rgb(data = img)+
+      coord_equal()+
+      scale_x_continuous(expand = c(0,0))+
+      scale_y_continuous(expand = c(0,0))+
+      theme_void()
+    
+    plot <- plot +
+      annotation_custom(ggplotGrob(img_plot), xmin = 400, xmax = 670, ymin = 0.4, ymax = 0.72)
+    
+  }else{
+    if(unique(sp$Obs == "Green and Red Algae")){
+     img<-rast("Data/Pictures/VAN/Lab/Green_and_Red.jpg")
+    
+    
+    img_plot<-ggplot()+
+      geom_spatraster_rgb(data = img)+
+      coord_equal()+
+      scale_x_continuous(expand = c(0,0))+
+      scale_y_continuous(expand = c(0,0))+
+      theme_void()
+    
+    plot <- plot +
+      annotation_custom(ggplotGrob(img_plot), xmin = 400, xmax = 670, ymin = 0.4, ymax = 0.72) 
+    }
+      
+    
+    }
+  
+  ggsave(paste0("Plot/VAN/RAW/Sample",unique(sp$Sample),".jpg" ), plot, width = 10, height = 10, dpi = 200)
+
+}
+
+
+
+
+####  STD 
+
+df_VAN_STD <- output_VAN %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+  group_by(Name) %>% 
+  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+          Wavelength = Wavelength,
+          ref = ref,
+          Spectra = Spectra,
+          dataset_Name = dataset_Name,
+          Sample = Sample,
+          Letter = Letter,
+          Obs = Obs)
+
+
+for(i in 1:length(unique(df_VAN_STD$Sample))){
+  
+  sp_STD <- df_VAN_STD %>% 
+   dplyr::filter(Sample == unique(output_VAN$Sample)[i])
+  
+  plot <- ggplot(sp_STD)+
+    geom_line(aes(x = Wavelength, y = STD, color = Letter, group = Name))+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
+              size = 5, hjust = 0)+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.13, label = paste0("Specie: ", unique(Obs))),
+              size = 5, hjust = 0)+
+    scale_color_manual(values = c("grey30","orange","red", "green4", "red1", "red4"),
+                       breaks = c("A","B","C","D","E","F"), 
+                       labels = c("Sparse on Table","Sparse on Sediment","High density", "Green algae", "Red Algae1", "Red Algae2"))+
+    xlab("Wv (nm)")+
+    ylab("STD Reflectance")+
+    theme_Bede()+
+    theme(axis.text.x = element_text(size = 15),
+          axis.text.y = element_text(size = 15),
+          legend.position = "top", 
+          legend.key.width = unit(1,"cm"),
+          legend.key.height = unit(3,"mm"))
+  
+  ggsave(paste0("Plot/VAN/STD/Sample",unique(sp_STD$Sample),"_STD.jpg" ), plot, width = 10, height = 10, dpi = 200)
+
+}
+
 
 
 ```

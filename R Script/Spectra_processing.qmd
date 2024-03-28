@@ -20,14 +20,10 @@ df <-  read_table("Data/CSV/all_spectra.csv")
 df_long <- df %>% 
   pivot_longer(-Wavelength, names_to = "Name",values_to = "ref") %>% 
   mutate(Name = gsub(".asd","",Name),
-         sample = as.numeric(gsub("\\D", "", Name)),
-         dataset_Name = gsub("[[:digit:]]","",Name) %>% 
-           gsub("-","",.))
+         Spectra = as.numeric(gsub("\\D", "", Name)),
+         dataset_Name = gsub("[[:digit:]]","",Name))
+        
 
-df_sum<- df_long %>% 
-  group_by(dataset_Name, Wavelength) %>% 
-  reframe(mean = mean(ref),
-          sd = sd(ref))
 ```
 
 ```{r plot_sum}
@@ -39,10 +35,10 @@ ggplot() +
 
 ```
 
-```{r VIE}
+```{r Test auto process}
 
 df_VIE<- df_long %>% 
-  dplyr::filter(dataset_Name == "GRAVIE")
+  dplyr::filter(dataset_Name == "GRA-VIE")
 
 df_VIE %>% 
   dplyr::filter(Wavelength >= 400,
@@ -100,7 +96,7 @@ mds_df <- nMDS$points %>%
   as_tibble()  %>%
   dplyr::rename(x=V1,y=V2) %>% 
   mutate(Spectra = names(df_VIE_wide)[-1],
-         ID = c(1:nrow(mds_df)))
+         ID = c(1:nrow(.)))
 
 p = hclust(sam, method = "complete")
 
@@ -115,10 +111,136 @@ df_VIE_final <-  df_VIE %>%
                 Wavelength <= 950) %>% 
   left_join(mds_df, by = c("Name" = "Spectra"))
 
+ggplot(df_VIE_final)+
+  geom_point(aes(x = x_nMDS, y = y_nMDS, color =clust))+
+  theme(legend.position = "None")
+
 
 df_VIE_final %>% 
-  dplyr::filter(clust == 87) %>% 
+  dplyr::filter(clust == 2) %>% 
   ggplot()+
   geom_line(aes(x = Wavelength, y = ref, color = Name))
 
 ```
+
+```{r BER}
+
+df_Ber_long <- df %>% 
+  pivot_longer(-Wavelength, names_to = "Name",values_to = "ref") %>% 
+  mutate(Name = gsub(".asd","",Name),
+         Spectra = as.numeric(gsub("\\D", "", Name)),
+         dataset_Name = gsub("[[:digit:]]","",Name) %>% 
+           gsub("-","",.)) %>% 
+  dplyr::filter(str_detect(dataset_Name, "BER"))
+
+
+Notebook_BER <- read.delim("Data/Notebook/Sampling_Notebook_BER.txt")
+
+
+for(i in 1:nrow(Notebook_BER)){
+  
+  a <- df_Ber_long %>% 
+    dplyr::filter(Spectra %in% c(Notebook_BER$Start[i]:Notebook_BER$End[i])) %>% 
+    mutate(Sample = Notebook_BER$Sample[i],
+           Letter = Notebook_BER$Letter[i],
+           Obs = Notebook_BER$Obs[i])
+  
+if(i == 1){
+  output_BER <- a
+}  else{
+  output_BER <- output_BER %>% 
+    rbind(a)
+}
+  
+}
+
+write.csv(output_BER, "Data/CSV/RAW_BER_Spectra.csv")
+
+for(i in 1:length(unique(output_BER$Sample))){
+  
+  sp <- output_BER %>% 
+   dplyr::filter(Sample == unique(output_BER$Sample)[i]) %>% 
+    mutate(Letter = case_when(Letter == "A" ~ "Sparse on table",
+                              Letter == "B" ~ "Bare Sediment",
+                              Letter == "C" ~ "Sparse on Sediment",
+                              Letter == "D" ~ "High density"))
+  
+  plot <- ggplot(sp)+
+    geom_line(aes(x = Wavelength, y = ref, color = Letter, group = Name))+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
+              size = 5, hjust = 0)+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.13, label = paste0("Specie: ", unique(Obs))),
+              size = 5, hjust = 0)+
+    scale_color_manual(values = c("brown", "red","orange", "grey60"))+
+    xlab("Wv (nm)")+
+    ylab("Reflectance")+
+    theme_Bede()+
+    theme(axis.text.x = element_text(size = 15),
+          axis.text.y = element_text(size = 15),
+          legend.position = "top", 
+          legend.key.width = unit(1,"cm"),
+          legend.key.height = unit(3,"mm"))
+  
+  ggsave(paste0("Plot/BER/RAW/Sample",unique(sp$Sample),".jpg" ), plot, width = 10, height = 10, dpi = 200)
+
+  }
+```
+
+```{r VIE}
+df_VIE_long<- df_long %>% 
+  dplyr::filter(dataset_Name == "GRA-VIE",
+                Wavelength >= 400,
+                Wavelength <= 950)
+
+Notebook_VIE <- read.delim("Data/Notebook/Sampling_Notebook_VIE.txt")
+
+for(i in 1:nrow(Notebook_VIE)){
+  
+  a <- df_VIE_long %>% 
+    dplyr::filter(Spectra %in% c(Notebook_VIE$Start[i]:Notebook_VIE$End[i])) %>% 
+    mutate(Sample = Notebook_VIE$Sample[i],
+           Letter = Notebook_VIE$Letter[i],
+           Obs = Notebook_VIE$Obs[i])
+  
+  if(i == 1){
+    output_VIE <- a
+  }  else{
+    output_VIE <- output_VIE %>% 
+      rbind(a)
+  }
+  
+}
+
+for(i in 1:length(unique(output_VIE$Sample))){
+  
+  sp <- output_VIE %>% 
+   dplyr::filter(Sample == unique(output_VIE$Sample)[i]) %>% 
+    mutate(Letter = case_when(Letter == "A" ~ "High density",
+                              # Letter == "B" ~ "Bare Sediment",
+                              Letter == "B" ~ "Sparse on table",
+                              Letter == "C" ~ "Sparse on Sediment"))
+  
+  plot <- ggplot(sp)+
+    geom_line(aes(x = Wavelength, y = ref, color = Letter, group = Name))+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
+              size = 5, hjust = 0)+
+    geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.13, label = paste0("Specie: ", unique(Obs))),
+              size = 5, hjust = 0)+
+    scale_color_manual(values = c("brown", "red","orange", "grey60"))+
+    xlab("Wv (nm)")+
+    ylab("Reflectance")+
+    theme_Bede()+
+    theme(axis.text.x = element_text(size = 15),
+          axis.text.y = element_text(size = 15),
+          legend.position = "top", 
+          legend.key.width = unit(1,"cm"),
+          legend.key.height = unit(3,"mm"))
+  
+  ggsave(paste0("Plot/VIE/RAW/Sample",unique(sp$Sample),".jpg" ), plot, width = 10, height = 10, dpi = 200)
+
+  }
+
+
+```
+
+

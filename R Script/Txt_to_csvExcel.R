@@ -5,7 +5,7 @@ library(readxl)
 
 #### Make list of each spectra file .txt
 
-filenames <- list.files(selectDirectory(), pattern = ".txt", full.names = T)
+filenames <- list.files("Data/TXT", pattern = ".txt", full.names = T)
 
 
 for(i in 1:length(filenames)){
@@ -28,17 +28,4 @@ for(i in 1:length(filenames)){
   }
 }
 
-write_delim(output,"F:/Spectra_Gracilaria/CSV/all_spectra.csv")
-
-
-df <- output %>% 
-  pivot_longer(-Wavelength, values_to = "values", names_to = "name") %>% 
-  mutate(names_station = gsub(".asd","",name) %>% 
-           gsub('[[:digit:]]+',"",.))
-
-
-df2 <- df %>% 
-  filter(names_station == "GRA-BER") %>% 
-  pivot_wider(values_from = "values",names_from = "name")
-
-write.csv(df2, "F:/Spectra_Gracilaria/CSV/GRA_BER.csv")
+write_delim(output,"Data/CSV/all_spectra.csv")

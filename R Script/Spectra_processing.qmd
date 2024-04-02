@@ -537,4 +537,34 @@ for(i in 1:length(unique(df_VAN_STD$Sample))){
 
 ```
 
+```{r OSM}
+
+
+df_OSM <- df_long %>% 
+  dplyr::filter(dataset_Name == "OSM-GIL")
+
+df_OSM <- df_OSM %>%   
+  dplyr::filter(Wavelength>=400, Wavelength<=950) %>% 
+  group_by(Wavelength) %>% 
+  reframe(ref=mean(ref)) %>% 
+  ungroup() %>% 
+  mutate(Name = "OSM")
+```
+
+```{r CHON}
+
+
+df_CHO <- df_long %>% 
+  dplyr::filter(dataset_Name == "CHO-GIL")
+
+ggplot(df_CHO)+
+  geom_line(aes(x = Wavelength, y =ref, group = Name))
+
+df_CHO <- df_CHO %>%   
+  dplyr::filter(Wavelength>=400, Wavelength<=950) %>% 
+  group_by(Wavelength) %>% 
+  reframe(ref=mean(ref)) %>% 
+  ungroup() %>% 
+  rename(CHO = ref)
+```
 

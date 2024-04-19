@@ -1,0 +1,40 @@
+---
+title: "Standadisation_Spectra"
+author: "Simon Oiry"
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+```{r}
+library(readr)
+library(tidyverse)
+
+VIE <- read_csv("./Data/CSV/RAW_VIE_Spectra.csv")
+
+VIE_STD <- VIE %>% 
+  group_by(Name) %>% 
+  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+          Wavelength = Wavelength,
+          ref = ref,
+          Spectra = Spectra,
+          dataset_Name = dataset_Name,
+          Sample = Sample,
+          Letter = Letter,
+          Obs = Obs)
+
+VIE_STD_mean <- VIE_STD %>%
+  # filter(Sample == 1) %>% 
+  group_by(Wavelength, Sample, Letter) %>%
+  reframe(mean_STD = mean(STD),
+          mean = mean(ref),
+          dataset_Name = unique(dataset_Name),
+          Obs = unique(Obs))
+
+ggplot(VIE_STD_mean)+
+  geom_line(aes(x = Wavelength, y = mean_STD, color = Letter))+
+  facet_wrap(~Sample)
+
+
+```

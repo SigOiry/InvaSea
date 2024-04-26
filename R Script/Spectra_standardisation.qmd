@@ -37,4 +37,47 @@ ggplot(VIE_STD_mean)+
   facet_wrap(~Sample)
 
 
+df_std_vie <- VIE_STD_mean %>% 
+  mutate(name = paste(dataset_Name,Sample,Letter, sep = "_")) %>% 
+  select(-c(Sample,Letter,mean,dataset_Name,Obs)) %>% 
+  pivot_wider(names_from = "name", values_from = "mean_STD")
+write.csv(df_std_vie, "Output/Vie_STD.csv")
+
 ```
+
+```{r}
+VAN <- read_csv("./Data/CSV/RAW_VAN_Spectra.csv")
+
+
+VAN_STD <- VAN %>% 
+  filter(!Name == "GRA-VAN00000") %>% 
+  group_by(Name) %>% 
+  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+          Wavelength = Wavelength,
+          ref = ref,
+          Spectra = Spectra,
+          dataset_Name = dataset_Name,
+          Sample = Sample,
+          Letter = Letter,
+          Obs = Obs)
+
+VAN_STD_mean <- VAN_STD %>%
+  # filter(Sample == 1) %>% 
+  group_by(Wavelength, Sample, Letter) %>%
+  reframe(mean_STD = mean(STD),
+          mean = mean(ref),
+          dataset_Name = unique(dataset_Name),
+          Obs = unique(Obs))
+
+ggplot(VAN_STD_mean)+
+  geom_line(aes(x = Wavelength, y = mean_STD, color = Letter))+
+  facet_wrap(~Sample)
+
+
+df_std_VAN <- VAN_STD_mean %>% 
+  mutate(name = paste(dataset_Name,Sample,Letter, sep = "_")) %>% 
+  select(-c(Sample,Letter,mean,dataset_Name,Obs)) %>% 
+  pivot_wider(names_from = "name", values_from = "mean_STD")
+write.csv(df_std_VAN, "Output/VAN_STD.csv")
+```
+

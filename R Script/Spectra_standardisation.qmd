@@ -80,4 +80,3 @@ df_std_VAN <- VAN_STD_mean %>%
   pivot_wider(names_from = "name", values_from = "mean_STD")
 write.csv(df_std_VAN, "Output/VAN_STD.csv")
 ```
-

@@ -25,8 +25,148 @@ df_long <- df %>%
          Spectra = as.numeric(gsub("\\D", "", Name)),
          dataset_Name = gsub("[[:digit:]]","",Name))
         
+unique(df_long$dataset_Name)
+
+
+test <- df_long %>% 
+  dplyr::filter(dataset_Name == "MORB")
 
 ```
+
+```{r loop across notebooks}
+
+notebooks <- list.files("./Data/Notebook", full.names = T)
+
+
+
+for(i in 1:length(notebooks)){
+  
+  nb <- read.delim(notebooks[i])
+  print(unique(nb$Site))
+  
+  if(unique(nb$Site) %in% c("BEL","MORB")){
+    nb <- nb %>% 
+      mutate(Start = Start+100000,
+             End = End+100000)
+  }else if(unique(nb$Site) %in% c("SCORFF","AULNE")){
+     nb <- nb %>% 
+      mutate(Start = Start+200000,
+             End = End+200000)
+  }
+  
+  for(ii in 1:nrow(nb)){
+  
+    a <- df_long %>% 
+      dplyr::filter(dataset_Name == unique(nb$Site),
+                    Spectra %in% c(nb$Start[ii]:nb$End[ii])) %>% 
+      mutate(Sample = nb$Sample[ii],
+             Letter = nb$Letter[ii],
+             Obs = nb$Obs[ii])
+    
+    if(ii == 1){
+      output <- a
+    }  else{
+      output <- output %>% 
+        rbind(a)
+    }
+  
+  }
+
+  write.csv(output, paste0("Data/CSV/RAW_",unique(nb$Site),"_Spectra.csv"))
+  
+}
+
+```
+
+```{r loop plotting across CSV}
+
+
+CSV_sites <- list.files("./Data/CSV", full.names = T) %>% 
+  as.data.frame() %>% 
+  rename(path = ".") %>% 
+  mutate(name = gsub(".*/","",path) %>% gsub(".csv","",.)) %>% 
+  filter(!name %in% c("all_spectra","RAW_BER_Spectra","RAW_VAN_Spectra","RAW_VIE_Spectra"))
+
+for(i in 1:nrow(CSV_sites)){
+  
+  print(i)
+  
+  df <- read.csv(CSV_sites$path[i]) %>% 
+    select(-X) %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+  group_by(Name) %>% 
+  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+          Wavelength = Wavelength,
+          ref = ref,
+          Spectra = Spectra,
+          dataset_Name = dataset_Name,
+          Sample = Sample,
+          Letter = Letter,
+          Obs = Obs) 
+  
+  for(ii in 1:length(unique(df$Sample))){
+    
+    a <- df %>% 
+      dplyr::filter(Sample == unique(df$Sample)[ii])
+    
+    plt <- ggplot(a)+
+      geom_line(aes(x = Wavelength, y=ref, group = Name, color = Letter))+
+      geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
+              size = 5, hjust = 0)+
+      theme_Bede()
+    
+    ggsave(paste0("Plot/", unique(a$dataset_Name),"/Sample_",unique(df$Sample)[ii],".png"), plt)
+    
+  }
+}
+
+```
+
+```{r loop STD across CSV}
+
+CSV_sites <- list.files("./Data/CSV", full.names = T) %>% 
+  as.data.frame() %>% 
+  rename(path = ".") %>% 
+  mutate(name = gsub(".*/","",path) %>% gsub(".csv","",.)) %>% 
+  filter(!name %in% c("all_spectra","RAW_BER_Spectra","RAW_VAN_Spectra","RAW_VIE_Spectra"))
+
+
+for(i in 10:nrow(CSV_sites)){
+  
+  print(i)
+  
+  df <- read.csv(CSV_sites$path[i]) %>% 
+    select(-X) %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+  group_by(Name) %>% 
+  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+          Wavelength = Wavelength,
+          ref = ref,
+          Spectra = Spectra,
+          dataset_Name = dataset_Name,
+          Sample = Sample,
+          Letter = Letter,
+          Obs = Obs) 
+  
+  df_STD <- df %>% 
+  group_by(Wavelength, Sample, Letter) %>%
+  reframe(mean_STD = mean(STD),
+          mean_RAW = mean(ref),
+          dataset_Name = unique(dataset_Name)) %>% 
+    mutate(ID = paste(dataset_Name,Sample,Letter, sep = "_"))
+  
+  write_csv(df_STD, paste0("Output/",unique(df_STD$dataset_Name),"_STD.csv"))
+  
+}
+
+```
+
+
+
+
+
 
 ```{r plot_sum}
 df_sum %>% 

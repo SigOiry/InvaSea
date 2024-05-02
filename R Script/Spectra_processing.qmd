@@ -9,7 +9,7 @@ editor_options:
 
 ```{r Library}
 library(tidyverse)
-library(hsdar)
+# library(hsdar)
 library(Utilities.Package)
 library(terra)
 library(tidyterra)
@@ -23,25 +23,23 @@ df_long <- df %>%
   pivot_longer(-Wavelength, names_to = "Name",values_to = "ref") %>% 
   mutate(Name = gsub(".asd","",Name),
          Spectra = as.numeric(gsub("\\D", "", Name)),
-         dataset_Name = gsub("[[:digit:]]","",Name))
-        
-unique(df_long$dataset_Name)
-
-
-test <- df_long %>% 
-  dplyr::filter(dataset_Name == "MORB")
+         dataset_Name = gsub("[[:digit:]]","",Name),
+         dataset_Name = gsub("GRA-","",dataset_Name))
 
 ```
 
 ```{r loop across notebooks}
 
-notebooks <- list.files("./Data/Notebook", full.names = T)
+notebooks <- list.files("./Data/Notebook", full.names = T) %>% 
+  as.data.frame() %>% 
+  rename(path = ".") %>% 
+  mutate(name = gsub(".*/","",path),
+         site = gsub(".*_","",name) %>% gsub(".txt","",.))
 
-
-
-for(i in 1:length(notebooks)){
+for(i in 1:nrow(notebooks)){
   
-  nb <- read.delim(notebooks[i])
+  nb <- read.delim(notebooks$path[i])%>% 
+      dplyr::filter(Obs == "Gracilaria")
   print(unique(nb$Site))
   
   if(unique(nb$Site) %in% c("BEL","MORB")){
@@ -52,6 +50,29 @@ for(i in 1:length(notebooks)){
      nb <- nb %>% 
       mutate(Start = Start+200000,
              End = End+200000)
+  }else if (unique(nb$Site) == "BER"){
+    nb <- nb %>% 
+      mutate(Letter_new = case_when(Letter == "B"~"D",
+                                    Letter == "C"~"B",
+                                    Letter == "D"~"C",
+                                    TRUE ~ Letter),
+             Letter = Letter_new) %>% 
+      dplyr::select(-Letter_new)
+      
+    
+  }else if(unique(nb$Site) == "VIE"){
+        nb <- nb %>% 
+      mutate(Letter_new = case_when(Letter == "A"~"C",
+                                    Letter %in% c("B","C") ~"A",
+                                    Letter %in% c("D","E")~"B",
+                                    TRUE ~ Letter),
+             Letter = Letter_new) %>% 
+      dplyr::select(-Letter_new)
+    
+  }else if(unique(nb$Site) == "VAN"){
+    
+    # No need to change the letters, it's already the righ ones in the notebook
+    
   }
   
   for(ii in 1:nrow(nb)){
@@ -85,16 +106,17 @@ CSV_sites <- list.files("./Data/CSV", full.names = T) %>%
   as.data.frame() %>% 
   rename(path = ".") %>% 
   mutate(name = gsub(".*/","",path) %>% gsub(".csv","",.)) %>% 
-  filter(!name %in% c("all_spectra","RAW_BER_Spectra","RAW_VAN_Spectra","RAW_VIE_Spectra"))
+  filter(!name %in% c("all_spectra"))
 
 for(i in 1:nrow(CSV_sites)){
   
-  print(i)
+  print(paste0(i,"/",nrow(CSV_sites)))
   
   df <- read.csv(CSV_sites$path[i]) %>% 
     select(-X) %>% 
   dplyr::filter(Wavelength >= 400,
-                Wavelength <= 950) %>% 
+                Wavelength <= 950,
+                Letter %in% c("A","B","C")) %>% 
   group_by(Name) %>% 
   reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
           Wavelength = Wavelength,
@@ -111,9 +133,14 @@ for(i in 1:nrow(CSV_sites)){
       dplyr::filter(Sample == unique(df$Sample)[ii])
     
     plt <- ggplot(a)+
-      geom_line(aes(x = Wavelength, y=ref, group = Name, color = Letter))+
+      geom_line(aes(x = Wavelength, y=ref, group = Name, color = as.factor(Letter)))+
       geom_text(aes(x = 400, y = max(ref)-(max(ref)-min(ref))*0.1, label = paste0("Sample: ", unique(Sample))),
               size = 5, hjust = 0)+
+    scale_color_manual(values = c("grey40" ,"yellow4","red"),
+                       breaks = c("A",
+                                  "B",
+                                  "C"), 
+                       labels = c("A -  Sparse on Table", "B - Sparse on Sediment" ,"C - High density"))+
       theme_Bede()
     
     ggsave(paste0("Plot/", unique(a$dataset_Name),"/Sample_",unique(df$Sample)[ii],".png"), plt)
@@ -168,104 +195,16 @@ for(i in 10:nrow(CSV_sites)){
 
 
 
-```{r plot_sum}
-df_sum %>% 
-ggplot() + 
-  geom_line(aes(x = Wavelength, y = mean, color = dataset_Name))+
-  geom_ribbon(aes(x = Wavelength, ymin = mean-sd, ymax = mean + sd, color = dataset_Name, fill = dataset_Name), alpha = 0.3)+
-  facet_wrap(~dataset_Name)
-
-```
-
-```{r Test auto process}
-
-df_VIE<- df_long %>% 
-  dplyr::filter(dataset_Name == "GRA-VIE")
-
-df_VIE %>% 
-  dplyr::filter(Wavelength >= 400,
-                Wavelength <= 950) %>% 
-ggplot()+
-  geom_line(aes(x = Wavelength, y = ref, group = Name))
 
 
-df_VIE_wide <- df_VIE %>% 
-  dplyr::filter(Wavelength >= 400,
-                Wavelength <= 950) %>% 
-  dplyr::select(-c(sample,dataset_Name)) %>% 
-  pivot_wider(names_from = "Name", values_from = "ref")
-  
-
-wv <- as.numeric(df_VIE_wide$Wavelength)
-
-speclib_vie <- df_VIE_wide %>% 
-  dplyr::select(-Wavelength) %>% 
-  as.matrix()
-
-spectra_dist <- data.frame(spectra = names(df_VIE_wide)[-1],
-                           distance = NA)
-
-for(i in 2:ncol(speclib_vie)){
-  
-  ref <- speclib(speclib_vie[,i-1], wv)
-  sp <- speclib(speclib_vie[,i], wv)
-  
-  spectra_dist$distance[i] <- as.numeric(sam(ref,sp))
-}
-
-spectra_dist$ID <- as.character(c(1:nrow(spectra_dist)))
 
 
-spectra_dist %>% 
-  slice(1:200) %>% 
-ggplot()+
-  geom_bar(aes(x = ID, y = distance),stat="identity")
 
-
-df_VIE %>% 
-  dplyr::filter(Name == "GRA-VIE-00009" | Name == "GRA-VIE-00010") %>% 
-ggplot()+
-  geom_line(aes(x = Wavelength, y = ref, color = Name))
-
-
-spectlib_all <- speclib(speclib_vie, wv)
-
-sam <- dist.speclib(spectlib_all, method = "sam")
-
-nMDS <- MASS::isoMDS(sam,maxit = 1000,trace=FALSE) 
-
-mds_df <- nMDS$points %>% 
-  as_tibble()  %>%
-  dplyr::rename(x=V1,y=V2) %>% 
-  mutate(Spectra = names(df_VIE_wide)[-1],
-         ID = c(1:nrow(.)))
-
-p = hclust(sam, method = "complete")
-
-mds_df<-mds_df %>% 
-  mutate(clust = cutree(p, k = length(names(df_VIE_wide)[-1])/10)) %>% 
-  rename(x_nMDS = "x",
-         y_nMDS = "y")
-
-
-df_VIE_final <-  df_VIE %>% 
-  dplyr::filter(Wavelength >= 400,
-                Wavelength <= 950) %>% 
-  left_join(mds_df, by = c("Name" = "Spectra"))
-
-ggplot(df_VIE_final)+
-  geom_point(aes(x = x_nMDS, y = y_nMDS, color =clust))+
-  theme(legend.position = "None")
-
-
-df_VIE_final %>% 
-  dplyr::filter(clust == 2) %>% 
-  ggplot()+
-  geom_line(aes(x = Wavelength, y = ref, color = Name))
-
-```
 
 ```{r BER}
+
+
+#### NO NEED TO RUN THIS IF THE CHUNK loop across notebooks HAS ALREADY BEEN RUN 
 
 df_Ber_long <- df %>% 
   pivot_longer(-Wavelength, names_to = "Name",values_to = "ref") %>% 
@@ -379,6 +318,10 @@ for(i in 1:length(unique(df_BER_STD$Sample))){
 ```
 
 ```{r VIE}
+
+#### NO NEED TO RUN THIS IF THE CHUNK loop across notebooks HAS ALREADY BEEN RUN 
+
+
 df_VIE_long<- df_long %>% 
   dplyr::filter(dataset_Name == "GRA-VIE",
                 Wavelength >= 400,
@@ -427,7 +370,15 @@ for(i in 1:length(unique(output_VIE$Sample))){
     geom_text(aes(x = 850, y = 0.65, label = paste0("Specie: ", unique(Obs))),
               size = 5, hjust = 0)+
     scale_color_manual(values = c( "red","orange","orange3","yellow3","yellow4","brown", "grey30","grey40","grey50" ),
-                       breaks = c("A","B","C","D","E","F","G","H","I"), 
+                       breaks = c("A",
+                                  "B",
+                                  "C",
+                                  "D",
+                                  "E",
+                                  "F",
+                                  "G",
+                                  "H",
+                                  "I"), 
                        labels = c("High density","Sparse on table1","Sparse on table2","Sparse on Sediment1","Sparse on Sediment2","Sediment", "Fucus1", "Fucus2", "Fucus3"))+
     xlab("Wv (nm)")+
     ylab("Reflectance")+
@@ -526,6 +477,9 @@ for(i in 1:length(unique(df_VIE_STD$Sample))){
 ```
 
 ```{r VANNE}
+
+#### NO NEED TO RUN THIS IF THE CHUNK loop across notebooks HAS ALREADY BEEN RUN 
+
 df_VAN_long<- df_long %>% 
   dplyr::filter(dataset_Name == "GRA-VAN",
                 Wavelength >= 400,
@@ -675,36 +629,5 @@ for(i in 1:length(unique(df_VAN_STD$Sample))){
 
 
 
-```
-
-```{r OSM}
-
-
-df_OSM <- df_long %>% 
-  dplyr::filter(dataset_Name == "OSM-GIL")
-
-df_OSM <- df_OSM %>%   
-  dplyr::filter(Wavelength>=400, Wavelength<=950) %>% 
-  group_by(Wavelength) %>% 
-  reframe(ref=mean(ref)) %>% 
-  ungroup() %>% 
-  mutate(Name = "OSM")
-```
-
-```{r CHON}
-
-
-df_CHO <- df_long %>% 
-  dplyr::filter(dataset_Name == "CHO-GIL")
-
-ggplot(df_CHO)+
-  geom_line(aes(x = Wavelength, y =ref, group = Name))
-
-df_CHO <- df_CHO %>%   
-  dplyr::filter(Wavelength>=400, Wavelength<=950) %>% 
-  group_by(Wavelength) %>% 
-  reframe(ref=mean(ref)) %>% 
-  ungroup() %>% 
-  rename(CHO = ref)
 ```
 

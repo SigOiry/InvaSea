@@ -9,7 +9,6 @@ editor_options:
 
 ```{r Library}
 library(tidyverse)
-# library(hsdar)
 library(Utilities.Package)
 library(terra)
 library(tidyterra)
@@ -49,7 +48,9 @@ for(i in 1:nrow(notebooks)){
   }else if(unique(nb$Site) %in% c("SCORFF","AULNE")){
      nb <- nb %>% 
       mutate(Start = Start+200000,
-             End = End+200000)
+             End = End+200000) %>% 
+      dplyr::filter(Sample != 21)
+     
   }else if (unique(nb$Site) == "BER"){
     nb <- nb %>% 
       mutate(Letter_new = case_when(Letter == "B"~"D",
@@ -158,31 +159,25 @@ for(i in 1:nrow(CSV_sites)){
   df <- read.csv(CSV_sites$path[i]) %>% 
     select(-X) %>% 
   dplyr::filter(Wavelength >= 400,
-                Wavelength <= 950) %>% 
-  group_by(Name) %>% 
-  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+                Wavelength <= 950) %>%
+  group_by(Wavelength, Sample, Letter) %>% 
+  reframe(mean_RAW = mean(ref),
+          dataset_Name = unique(dataset_Name)) %>%
+  group_by(Sample,Letter) %>% 
+  reframe(mean_STD = (mean_RAW - min(mean_RAW))/(max(mean_RAW)-min(mean_RAW)),
           Wavelength = Wavelength,
-          ref = ref,
-          Spectra = Spectra,
+          mean_RAW = mean_RAW,
           dataset_Name = dataset_Name,
           Sample = Sample,
-          Letter = Letter,
-          Obs = Obs) 
+          Letter = Letter) %>% 
+  mutate(ID = paste(dataset_Name,Sample,Letter, sep = "_"))
   
-  df_STD <- df %>% 
-  group_by(Wavelength, Sample, Letter) %>%
-  reframe(mean_STD = mean(STD),
-          mean_RAW = mean(ref),
-          dataset_Name = unique(dataset_Name)) %>% 
-    mutate(ID = paste(dataset_Name,Sample,Letter, sep = "_"))
-  
-  write_csv(df_STD, paste0("Output/",unique(df_STD$dataset_Name),"_STD.csv"))
+  write_csv(df, paste0("Output/",unique(df_STD$dataset_Name),"_STD.csv"))
   
 }
-
 ```
 
-```{r looking for dataset without notebooks}
+```{r Process AV}
 
 notebooks <- list.files("./Data/Notebook", full.names = T) %>% 
   as.data.frame() %>% 
@@ -197,10 +192,45 @@ df_without_notebooks <- df_long %>%
 unique(df_without_notebooks$dataset_Name)
 
 
-df_without_notebooks %>% 
-  filter(dataset_Name == "AV") %>% 
-  ggplot()+
-  geom_line(aes(x = Wavelength, y = ref, group = Spectra))
+df_AV <- df_without_notebooks %>% 
+  filter(dataset_Name == "AV",
+         !Name == "AV0100011") 
+
+
+for (i in 1:22) {
+  
+  if (i == 1) {
+    start = 0
+    end = 9
+  }else{
+    start = start +10
+    end = end + 10
+  }
+  
+  names_i <- unique(df_AV$Name)[c(start:end)]
+  
+  a <- df_AV %>% 
+    dplyr::filter(Name %in% names_i) %>% 
+  dplyr::filter(Wavelength >= 400,
+                Wavelength <= 950) %>% 
+    group_by(Wavelength) %>% 
+    reframe(mean_RAW = mean(ref),
+            dataset_Name = unique(dataset_Name)) %>% 
+    mutate(mean_STD = (mean_RAW - min(mean_RAW))/(max(mean_RAW)-min(mean_RAW)),
+           Sample = i,
+           Letter = "Field", 
+           ID = paste(dataset_Name,Sample,Letter, sep = "_")) %>% 
+    relocate(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
+  
+  if (i == 1) {
+    output = a
+    
+  }else{
+    output = rbind(output,a)
+  }
+}
+
+ write_csv(output, paste0("Output/AV_STD.csv"))
 
 ```
 

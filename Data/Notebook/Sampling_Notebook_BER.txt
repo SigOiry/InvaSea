@@ -3,14 +3,14 @@ BER	1	A	1	10	Gracilaria
 BER	1	B	11	20	Gracilaria
 BER	1	C	21	30	Gracilaria
 BER	1	D	31	40	Gracilaria
-BER	2	A	41	50	Fucus
-BER	2	B	51	60	Fucus
-BER	2	C	61	70	Fucus
-BER	2	D	71	80	Fucus
-BER	3	A	81	90	Fucus
-BER	3	B	91	100	Fucus
-BER	3	C	101	110	Fucus
-BER	3	D	111	120	Fucus
+BER	2	A	41	50	Gracilaria
+BER	2	B	51	60	Gracilaria
+BER	2	C	61	70	Gracilaria
+BER	2	D	71	80	Gracilaria
+BER	3	A	81	90	Gracilaria
+BER	3	B	91	100	Gracilaria
+BER	3	C	101	110	Gracilaria
+BER	3	D	111	120	Gracilaria
 BER	4	A	121	130	Gracilaria
 BER	4	B	131	140	Gracilaria
 BER	4	C	141	150	Gracilaria
@@ -43,10 +43,10 @@ BER	11	A	401	410	Gracilaria
 BER	11	B	411	420	Gracilaria
 BER	11	C	421	430	Gracilaria
 BER	11	D	431	440	Gracilaria
-BER	12	A	442	451	Check the specie 
-BER	12	B	452	461	Check the specie 
-BER	12	C	462	471	Check the specie 
-BER	12	D	472	481	Check the specie 
+BER	12	A	442	451	Gracilaria
+BER	12	B	452	461	Gracilaria
+BER	12	C	462	471	Gracilaria
+BER	12	D	472	481	Gracilaria
 BER	13	A	482	491	Gracilaria
 BER	13	B	492	501	Gracilaria
 BER	13	C	502	511	Gracilaria

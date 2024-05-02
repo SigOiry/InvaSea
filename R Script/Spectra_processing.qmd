@@ -116,16 +116,7 @@ for(i in 1:nrow(CSV_sites)){
     select(-X) %>% 
   dplyr::filter(Wavelength >= 400,
                 Wavelength <= 950,
-                Letter %in% c("A","B","C")) %>% 
-  group_by(Name) %>% 
-  reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
-          Wavelength = Wavelength,
-          ref = ref,
-          Spectra = Spectra,
-          dataset_Name = dataset_Name,
-          Sample = Sample,
-          Letter = Letter,
-          Obs = Obs) 
+                Letter %in% c("A","B","C","Field"))
   
   for(ii in 1:length(unique(df$Sample))){
     
@@ -141,6 +132,7 @@ for(i in 1:nrow(CSV_sites)){
                                   "B",
                                   "C"), 
                        labels = c("A -  Sparse on Table", "B - Sparse on Sediment" ,"C - High density"))+
+      labs(color = " ")+
       theme_Bede()
     
     ggsave(paste0("Plot/", unique(a$dataset_Name),"/Sample_",unique(df$Sample)[ii],".png"), plt)
@@ -156,10 +148,10 @@ CSV_sites <- list.files("./Data/CSV", full.names = T) %>%
   as.data.frame() %>% 
   rename(path = ".") %>% 
   mutate(name = gsub(".*/","",path) %>% gsub(".csv","",.)) %>% 
-  filter(!name %in% c("all_spectra","RAW_BER_Spectra","RAW_VAN_Spectra","RAW_VIE_Spectra"))
+  filter(!name %in% c("all_spectra"))
 
 
-for(i in 10:nrow(CSV_sites)){
+for(i in 1:nrow(CSV_sites)){
   
   print(i)
   
@@ -189,6 +181,29 @@ for(i in 10:nrow(CSV_sites)){
 }
 
 ```
+
+```{r looking for dataset without notebooks}
+
+notebooks <- list.files("./Data/Notebook", full.names = T) %>% 
+  as.data.frame() %>% 
+  rename(path = ".") %>% 
+  mutate(name = gsub(".*/","",path),
+         site = gsub(".*_","",name) %>% gsub(".txt","",.))
+
+
+df_without_notebooks <- df_long %>% 
+  filter(!dataset_Name %in% notebooks$site)
+
+unique(df_without_notebooks$dataset_Name)
+
+
+df_without_notebooks %>% 
+  filter(dataset_Name == "AV") %>% 
+  ggplot()+
+  geom_line(aes(x = Wavelength, y = ref, group = Spectra))
+
+```
+
 
 
 

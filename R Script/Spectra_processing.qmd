@@ -149,32 +149,51 @@ CSV_sites <- list.files("./Data/CSV", full.names = T) %>%
   as.data.frame() %>% 
   rename(path = ".") %>% 
   mutate(name = gsub(".*/","",path) %>% gsub(".csv","",.)) %>% 
-  filter(!name %in% c("all_spectra"))
+  filter(!name %in% c("Etel","ASD_Etel_October2023","all_spectra"))
 
 
 for(i in 1:nrow(CSV_sites)){
   
+  site = CSV_sites$name[i] %>% 
+    gsub("RAW_","",.) %>% 
+    gsub("_Spectra","",.)
   print(i)
   
-  df <- read.csv(CSV_sites$path[i]) %>% 
-    select(-X) %>% 
-  dplyr::filter(Wavelength >= 400,
-                Wavelength <= 950) %>%
-  group_by(Wavelength, Sample, Letter) %>% 
-  reframe(mean_RAW = mean(ref),
-          dataset_Name = unique(dataset_Name)) %>%
-  group_by(Sample,Letter) %>% 
-  reframe(mean_STD = (mean_RAW - min(mean_RAW))/(max(mean_RAW)-min(mean_RAW)),
-          Wavelength = Wavelength,
-          mean_RAW = mean_RAW,
-          dataset_Name = dataset_Name,
-          Sample = Sample,
-          Letter = Letter) %>% 
-  mutate(ID = paste(dataset_Name,Sample,Letter, sep = "_"))
+  if(!file.exists(paste0("Output/",site,"_STD.csv"))){
+     
   
-  write_csv(df, paste0("Output/",unique(df_STD$dataset_Name),"_STD.csv"))
+    df <- read.csv(CSV_sites$path[i]) %>% 
+      select(-X) %>% 
+    dplyr::filter(Wavelength >= 400,
+                  Wavelength <= 900) %>% 
+    group_by(Name) %>% 
+    reframe(STD = (ref - min(ref))/(max(ref)-min(ref)),
+            Wavelength = Wavelength,
+            ref = ref,
+            Spectra = Spectra,
+            dataset_Name = dataset_Name,
+            Sample = Sample,
+            Letter = Letter,
+            Obs = Obs) 
+    
+    df_STD <- df %>% 
+    group_by(Wavelength, Sample, Letter) %>%
+    reframe(mean_STD = mean(STD),
+            mean_RAW = mean(ref),
+            dataset_Name = unique(dataset_Name)) %>% 
+      mutate(ID = paste(dataset_Name,Sample,Letter, sep = "_"))
+    
+    write_csv(df_STD, paste0("Output/",unique(df_STD$dataset_Name),"_STD.csv"))
+    
+    rm(df)
+    rm(df_STD) 
+    
+  }
   
 }
+
+
+
 ```
 
 ```{r Process AV}
@@ -212,7 +231,7 @@ for (i in 1:22) {
   a <- df_AV %>% 
     dplyr::filter(Name %in% names_i) %>% 
   dplyr::filter(Wavelength >= 400,
-                Wavelength <= 950) %>% 
+                Wavelength <= 900) %>% 
     group_by(Wavelength) %>% 
     reframe(mean_RAW = mean(ref),
             dataset_Name = unique(dataset_Name)) %>% 
@@ -234,7 +253,47 @@ for (i in 1:22) {
 
 ```
 
+```{r Process Etel}
 
+df_ETE <- read.csv("Data/CSV/Etel/RAW_ASD_Etel_October2023.csv") %>% 
+  dplyr::select(-X) %>%
+  mutate(group = case_when(str_detect(spectra_name, "GRA01") ~ "GRA01",
+                           str_detect(spectra_name, "GRA02") ~ "GRA02",
+                           str_detect(spectra_name, "GRA03") ~ "GRA03",
+                           str_detect(spectra_name, "LOR") ~ "LOR",
+                           TRUE ~ "NA"),
+         number = stringi::stri_replace_all_regex(spectra_name,group,"") %>% as.numeric(),
+         Letter = "Field",
+         Sample = case_when(group == "GRA01" & number >= 50 & number < 100 ~ 1,
+                        group == "GRA01" & number >= 100 & number < 150 ~ 2,
+                        group == "GRA01" & number >= 150 & number < 200 ~ 3,
+                        group == "GRA02" ~ 4,
+                        group == "GRA03" ~ 5,
+                        group == "LOR" & number >= 50 & number < 100 ~ 6,
+                        group == "LOR" & number >= 100 & number < 150 ~ 7,
+                        group == "LOR" & number >= 150 & number < 200 ~ 8,
+                        group == "LOR" & number >= 200 & number < 250 ~ 9,
+                        TRUE ~ NA),
+         dataset_Name = "ETEL",
+         ID = paste(dataset_Name, Sample,Letter, sep = "_")) %>% 
+  filter(!is.na(Sample),
+         Wavelength %in% c(400:900)) %>% 
+  group_by(Wavelength,ID) %>% 
+  reframe(mean_RAW = mean(Reflectance),
+          Sample = unique(Sample),
+          Letter = unique(Letter),
+          dataset_Name = unique(dataset_Name)) %>% 
+  ungroup() %>% 
+  group_by(ID) %>% 
+  mutate(mean_STD = (mean_RAW-min(mean_RAW))/(max(mean_RAW)-min(mean_RAW))) %>% 
+  relocate(Wavelength, Sample, Letter, mean_STD, mean_RAW, dataset_Name,ID)
+
+ggplot(df_ETE) +
+  geom_line(aes(x = Wavelength, y = mean_STD, color = ID))
+
+write_csv(df_ETE, paste0("Output/",unique(df_ETE$dataset_Name),"_STD.csv"))
+
+```
 
 
 

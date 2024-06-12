@@ -295,6 +295,15 @@ write_csv(df_ETE, paste0("Output/",unique(df_ETE$dataset_Name),"_STD.csv"))
 
 ```
 
+```{r plot check}
+
+"Output/VIE_STD.csv" %>% 
+  read.csv() %>% 
+  ggplot()+
+  geom_line(aes(x = Wavelength, y = mean_STD, color = ID), show.legend = F)
+
+```
+
 
 
 

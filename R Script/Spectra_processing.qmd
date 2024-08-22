@@ -304,16 +304,6 @@ write_csv(df_ETE, paste0("Output/",unique(df_ETE$dataset_Name),"_STD.csv"))
 
 ```
 
-
-
-
-
-
-
-
-
-
-
 ```{r BER}
 
 
@@ -743,4 +733,37 @@ for(i in 1:length(unique(df_VAN_STD$Sample))){
 
 
 ```
+
+```{r SAJA}
+Saja_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/Gracilaria-Saja-reflectance.txt", sep="") %>% 
+  pivot_longer(-wl, names_to = "Spectra", values_to = "Value") %>% 
+  group_by(Spectra) %>% 
+  mutate(std = (Value-min(Value))/(max(Value)-min(Value))) %>% 
+  ungroup() %>% 
+  rename(Wavelength = "wl",
+         mean_STD = "std",
+         mean_RAW = Value) %>% 
+  mutate(Sample = gsub("[^0-9]", "", Spectra) %>% as.numeric(),
+         Letter = "Field", 
+         dataset_Name = "SAJA",
+         ID = paste0(dataset_Name,"_",Sample,"_",Letter)) %>% 
+  dplyr::select(-Spectra) %>% 
+  dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
+
+write_csv(Saja_df, paste0("Output/",unique(Saja_df$dataset_Name),"_STD.csv"))
+
+ggplot(Saja_df)+
+  geom_line(aes(x = Wavelength, y = mean_STD, group = ID))
+```
+
+```{r Vigo}
+Vigo_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/20240626-GR_Vigo.txt", sep="")%>% 
+  pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Value") %>% 
+  mutate(Spectra = gsub(".asd","",Spectra))
+
+ggplot(Vigo_df)+
+  geom_line(aes(x = Wavelength, y = Value, group = Spectra))
+
+```
+
 

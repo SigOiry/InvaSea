@@ -734,7 +734,7 @@ for(i in 1:length(unique(df_VAN_STD$Sample))){
 
 ```
 
-```{r SAJA}
+```{r SAJA_field}
 Saja_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/Gracilaria-Saja-reflectance.txt", sep="") %>% 
   pivot_longer(-wl, names_to = "Spectra", values_to = "Value") %>% 
   group_by(Spectra) %>% 
@@ -756,7 +756,7 @@ ggplot(Saja_df)+
   geom_line(aes(x = Wavelength, y = mean_STD, group = ID))
 ```
 
-```{r Vigo}
+```{r Vigo_field}
 Vigo_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/20240626-GR_Vigo.txt", sep="")%>% 
   pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Rad") %>% 
   mutate(Spectra = gsub(".asd","",Spectra))
@@ -824,5 +824,50 @@ write_csv(df_spectra, paste0("Output/",unique(df_spectra$dataset_Name),"_STD.csv
 
 
 ```
+
+```{r SAJA_lab}
+Saja_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/SAJA-reflectance.txt", sep="") %>% 
+  pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Value") %>%
+  dplyr::filter(Wavelength >= 400 & Wavelength <= 900) %>% 
+  group_by(Spectra) %>% 
+  mutate(std = (Value-min(Value))/(max(Value)-min(Value))) %>% 
+  ungroup() %>% 
+  rename(mean_STD = "std",
+         mean_RAW = Value) %>% 
+  mutate(Sample = gsub("[^0-9]", "", Spectra) %>% as.numeric(),
+         Letter = "Field", 
+         dataset_Name = "SAJA",
+         ID = paste0(dataset_Name,"_",Sample,"_",Letter)) %>% 
+  dplyr::select(-Spectra) %>% 
+  dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
+
+Saja_df %>% 
+  ggplot(aes(x = Wavelength, y = mean_RAW, group = ID, color = ID))+
+  geom_line(show.legend = F)
+
+```
+
+```{r Vigo_lab}
+Vigo_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/CESANTES-reflectance.txt", sep="") %>% 
+  pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Value") %>%
+  dplyr::filter(Wavelength >= 400 & Wavelength <= 900) %>% 
+  group_by(Spectra) %>% 
+  mutate(std = (Value-min(Value))/(max(Value)-min(Value))) %>% 
+  ungroup() %>% 
+  rename(mean_STD = "std",
+         mean_RAW = Value) %>% 
+  mutate(Sample = gsub("[^0-9]", "", Spectra) %>% as.numeric(),
+         Letter = "Field", 
+         dataset_Name = "VIGO",
+         ID = paste0(dataset_Name,"_",Sample,"_",Letter)) %>% 
+  dplyr::select(-Spectra) %>% 
+  dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
+
+Vigo_df %>% 
+  ggplot(aes(x = Wavelength, y = mean_RAW, group = ID, color = ID))+
+  geom_line(show.legend = F)
+
+```
+
 
 

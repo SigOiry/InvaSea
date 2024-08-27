@@ -758,11 +758,70 @@ ggplot(Saja_df)+
 
 ```{r Vigo}
 Vigo_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/20240626-GR_Vigo.txt", sep="")%>% 
-  pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Value") %>% 
+  pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Rad") %>% 
   mutate(Spectra = gsub(".asd","",Spectra))
 
 ggplot(Vigo_df)+
-  geom_line(aes(x = Wavelength, y = Value, group = Spectra))
+  geom_line(aes(x = Wavelength, y = Rad, group = Spectra))
+
+AUC <- Vigo_df %>%
+  group_by(Spectra) %>% 
+  dplyr::summarise(
+    AUC = DescTools::AUC(Wavelength,Rad)
+  )
+
+Vigo_df<-Vigo_df %>% 
+  left_join(AUC, by = "Spectra") %>% 
+  mutate(type = case_when(AUC > 35 ~ "Spectralon",
+                          TRUE ~ "Spectra"))
+
+for(i in 1:nrow(Vigo_df)){
+  if(i == 1){
+    lot = 1
+  }else{
+    if(Vigo_df$type[i-1]!=Vigo_df$type[i]){
+      lot = lot+1
+    }
+  }
+  Vigo_df$lot[i] = lot
+}
+
+Vigo_df <- Vigo_df %>%
+  arrange(Spectra) %>% 
+  mutate(lot = cumsum(type != lag(type, default = first(type))))
+
+spectralon_avg<-Vigo_df %>% 
+  filter(type == "Spectralon") %>% 
+  group_by(lot,Wavelength) %>% 
+  reframe(Radiance = mean(Rad)) 
+
+df_spectra<-Vigo_df %>% 
+  filter(!type == "Spectralon") %>% 
+  group_by(lot,Wavelength) %>% 
+  reframe(Rad = mean(Rad)) %>%
+  mutate(lot_minus1 = lot - 1) %>%
+  left_join(spectralon_avg, 
+            by = c("lot_minus1" = "lot", "Wavelength" = "Wavelength")) %>%
+  mutate(Reflectance = Rad / Radiance) %>%
+  select(-Rad, -Radiance, -lot_minus1) %>% 
+  dplyr::filter(Wavelength >= 400 & Wavelength <=900)  %>% 
+  rename(Sample = lot) %>% 
+  group_by(Sample) %>% 
+  mutate(std = (Reflectance-min(Reflectance))/(max(Reflectance)-min(Reflectance))) %>%  
+  ungroup() %>% 
+  mutate(Letter = "Field", 
+         dataset_Name = "VIGO",
+         ID = paste0(dataset_Name,"_",Sample,"_",Letter)) %>% 
+  rename(mean_RAW = "Reflectance",
+         mean_STD = std) %>% 
+  dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
+  
+
+ggplot(df_spectra)+
+  geom_line(aes(x = Wavelength, y = mean_STD, group = ID,color = Sample))
+
+write_csv(df_spectra, paste0("Output/",unique(df_spectra$dataset_Name),"_STD.csv"))
+
 
 ```
 

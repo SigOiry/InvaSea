@@ -734,8 +734,9 @@ for(i in 1:length(unique(df_VAN_STD$Sample))){
 
 ```
 
-```{r SAJA_field}
-Saja_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/Gracilaria-Saja-reflectance.txt", sep="") %>% 
+```{r SAJA}
+
+Saja_df_field <- read.csv("D:/Git_repo/InvaSea/Data/Spain/Gracilaria-Saja-reflectance.txt", sep="") %>% 
   pivot_longer(-wl, names_to = "Spectra", values_to = "Value") %>% 
   group_by(Spectra) %>% 
   mutate(std = (Value-min(Value))/(max(Value)-min(Value))) %>% 
@@ -750,13 +751,125 @@ Saja_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/Gracilaria-Saja-reflectance.
   dplyr::select(-Spectra) %>% 
   dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
 
+Saja_df_lab <- read.csv("D:/Git_repo/InvaSea/Data/Spain/SAJA-reflectance.txt", sep="") %>% 
+  pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Value") %>%
+  dplyr::filter(Wavelength >= 400 & Wavelength <= 900) %>% 
+  # dplyr::filter(Sample >=111) %>% 
+  mutate(Sample = gsub("[^0-9]", "", Spectra) %>% as.numeric(),
+         dataset_Name = "SAJA",
+         Sample1 = case_when(
+                             # Sample < 90 ~ NA,
+                             Sample >=90 &  Sample < 120 ~ 8,
+                             Sample >=120 &  Sample < 150 ~ 10,
+                             Sample >=150 &  Sample < 180 ~ 9,
+                             Sample >=180 &  Sample < 210 ~ 4,
+                             Sample >=210 &  Sample < 240 ~ 2,
+                             Sample >=240 &  Sample < 270 ~ 5,
+                             Sample >=270 &  Sample < 300 ~ 7,
+                             Sample >=300 &  Sample < 330 ~ 3,
+                             Sample >=330 &  Sample < 360 ~ 1,
+                             Sample >=360 &  Sample < 390 ~ 6,
+                             Sample >=390 &  Sample < 420 ~ 11,
+                             Sample >=420 &  Sample < 450 ~ 12,
+                             Sample >=450 &  Sample < 480 ~ 13,
+                             Sample >=480 &  Sample < 510 ~ 14,
+                             Sample >=510 &  Sample < 540 ~ 15,
+                             Sample >=540 &  Sample < 570 ~ 16,
+                             Sample >=570 &  Sample < 600 ~ 17,
+                             Sample >=600 &  Sample < 630 ~ 18,
+                             Sample >=630 &  Sample < 660 ~ 19,
+                             Sample >=660 &  Sample < 690 ~ 20,
+                             Sample >=690 &  Sample < 720 ~ 21,
+                             T ~ NA),
+         Letter = case_when(Sample > 89 & Sample <= 99 ~ "A",
+                            Sample > 99 & Sample <= 109 ~ "B",
+                            Sample > 109 & Sample <= 119 ~ "C",
+                            Sample > 119 & Sample <= 129 ~ "A",
+                            Sample > 129 & Sample <= 139 ~ "B",
+                            Sample > 139 & Sample <= 149 ~ "C",
+                            Sample > 149 & Sample <= 159 ~ "A",
+                            Sample > 159 & Sample <= 169 ~ "B",
+                            Sample > 169 & Sample <= 179 ~ "C",
+                            Sample > 179 & Sample <= 189 ~ "A",
+                            Sample > 189 & Sample <= 199 ~ "B",
+                            Sample > 199 & Sample <= 209 ~ "C",
+                            Sample > 209 & Sample <= 219 ~ "A",
+                            Sample > 219 & Sample <= 229 ~ "B",
+                            Sample > 229 & Sample <= 239 ~ "C",
+                            Sample > 239 & Sample <= 249 ~ "A",
+                            Sample > 249 & Sample <= 259 ~ "B",
+                            Sample > 259 & Sample <= 269 ~ "C",
+                            Sample > 269 & Sample <= 279 ~ "A",
+                            Sample > 279 & Sample <= 289 ~ "B",
+                            Sample > 289 & Sample <= 299 ~ "C",
+                            Sample > 299 & Sample <= 309 ~ "A",
+                            Sample > 309 & Sample <= 319 ~ "B",
+                            Sample > 319 & Sample <= 329 ~ "C",
+                            Sample > 329 & Sample <= 339 ~ "A",
+                            Sample > 339 & Sample <= 349 ~ "B",
+                            Sample > 349 & Sample <= 359 ~ "C",
+                            Sample > 359 & Sample <= 369 ~ "A",
+                            Sample > 369 & Sample <= 379 ~ "B",
+                            Sample > 379 & Sample <= 389 ~ "C",
+                            Sample > 389 & Sample <= 399 ~ "A",
+                            Sample > 399 & Sample <= 409 ~ "B",
+                            Sample > 409 & Sample <= 419 ~ "C",
+                            Sample > 419 & Sample <= 429 ~ "A",
+                            Sample > 429 & Sample <= 439 ~ "B",
+                            Sample > 439 & Sample <= 449 ~ "C",
+                            Sample > 449 & Sample <= 459 ~ "A",
+                            Sample > 459 & Sample <= 469 ~ "B",
+                            Sample > 469 & Sample <= 479 ~ "C",
+                            Sample > 479 & Sample <= 489 ~ "A",
+                            Sample > 489 & Sample <= 499 ~ "B",
+                            Sample > 499 & Sample <= 509 ~ "C",
+                            Sample > 509 & Sample <= 519 ~ "A",
+                            Sample > 519 & Sample <= 529 ~ "B",
+                            Sample > 529 & Sample <= 539 ~ "C",
+                            Sample > 539 & Sample <= 549 ~ "A",
+                            Sample > 549 & Sample <= 559 ~ "B",
+                            Sample > 559 & Sample <= 569 ~ "C",
+                            Sample > 569 & Sample <= 579 ~ "A",
+                            Sample > 579 & Sample <= 589 ~ "B",
+                            Sample > 589 & Sample <= 599 ~ "C",
+                            Sample > 599 & Sample <= 609 ~ "A",
+                            Sample > 609 & Sample <= 619 ~ "B",
+                            Sample > 619 & Sample <= 629 ~ "C",
+                            Sample > 629 & Sample <= 639 ~ "A",
+                            Sample > 639 & Sample <= 649 ~ "B",
+                            Sample > 649 & Sample <= 659 ~ "C",
+                            Sample > 659 & Sample <= 669 ~ "A",
+                            Sample > 669 & Sample <= 679 ~ "B",
+                            Sample > 679 & Sample <= 689 ~ "C",
+                            Sample > 689 & Sample <= 699 ~ "A",
+                            Sample > 699 & Sample <= 709 ~ "B",
+                            Sample > 709 & Sample <= 719 ~ "C",
+                            TRUE ~ "Coucou"),
+         ID = paste0(dataset_Name,"_",Sample1,"_",Letter)) %>% 
+  dplyr::filter(!is.na(Sample1)) %>% 
+  group_by(Wavelength,ID) %>% 
+  reframe(mean_RAW = mean(Value),
+          Sample = unique(Sample1),
+          dataset_Name = unique(dataset_Name),
+          Letter = unique(Letter)) %>% 
+  ungroup() %>% 
+  group_by(ID) %>% 
+  mutate(mean_STD = (mean_RAW-min(mean_RAW))/(max(mean_RAW)-min(mean_RAW))) %>% 
+  dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
+
+
+saja_df <- Saja_df_field %>% 
+  bind_rows(Saja_df_lab)
+
 write_csv(Saja_df, paste0("Output/",unique(Saja_df$dataset_Name),"_STD.csv"))
 
-ggplot(Saja_df)+
-  geom_line(aes(x = Wavelength, y = mean_STD, group = ID))
+
 ```
 
-```{r Vigo_field}
+```{r Vigo}
+
+### FIELD #####
+
 Vigo_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/20240626-GR_Vigo.txt", sep="")%>% 
   pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Rad") %>% 
   mutate(Spectra = gsub(".asd","",Spectra))
@@ -795,7 +908,7 @@ spectralon_avg<-Vigo_df %>%
   group_by(lot,Wavelength) %>% 
   reframe(Radiance = mean(Rad)) 
 
-df_spectra<-Vigo_df %>% 
+df_Vigo_Field<-Vigo_df %>% 
   filter(!type == "Spectralon") %>% 
   group_by(lot,Wavelength) %>% 
   reframe(Rad = mean(Rad)) %>%
@@ -816,57 +929,117 @@ df_spectra<-Vigo_df %>%
          mean_STD = std) %>% 
   dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
   
+# 
+# ggplot(df_spectra)+
+#   geom_line(aes(x = Wavelength, y = mean_STD, group = ID,color = Sample))
 
-ggplot(df_spectra)+
-  geom_line(aes(x = Wavelength, y = mean_STD, group = ID,color = Sample))
+###############
 
-write_csv(df_spectra, paste0("Output/",unique(df_spectra$dataset_Name),"_STD.csv"))
-
-
-```
-
-```{r SAJA_lab}
-Saja_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/SAJA-reflectance.txt", sep="") %>% 
+Vigo_df_lab <- read.csv("D:/Git_repo/InvaSea/Data/Spain/CESANTES-reflectance.txt", sep="") %>% 
   pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Value") %>%
   dplyr::filter(Wavelength >= 400 & Wavelength <= 900) %>% 
-  group_by(Spectra) %>% 
-  mutate(std = (Value-min(Value))/(max(Value)-min(Value))) %>% 
-  ungroup() %>% 
-  rename(mean_STD = "std",
-         mean_RAW = Value) %>% 
+  rename(mean_RAW = Value) %>% 
   mutate(Sample = gsub("[^0-9]", "", Spectra) %>% as.numeric(),
-         Letter = "Field", 
-         dataset_Name = "SAJA",
-         ID = paste0(dataset_Name,"_",Sample,"_",Letter)) %>% 
-  dplyr::select(-Spectra) %>% 
-  dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
-
-Saja_df %>% 
-  ggplot(aes(x = Wavelength, y = mean_RAW, group = ID, color = ID))+
-  geom_line(show.legend = F)
-
-```
-
-```{r Vigo_lab}
-Vigo_df <- read.csv("D:/Git_repo/InvaSea/Data/Spain/CESANTES-reflectance.txt", sep="") %>% 
-  pivot_longer(-Wavelength, names_to = "Spectra", values_to = "Value") %>%
-  dplyr::filter(Wavelength >= 400 & Wavelength <= 900) %>% 
-  group_by(Spectra) %>% 
-  mutate(std = (Value-min(Value))/(max(Value)-min(Value))) %>% 
-  ungroup() %>% 
-  rename(mean_STD = "std",
-         mean_RAW = Value) %>% 
-  mutate(Sample = gsub("[^0-9]", "", Spectra) %>% as.numeric(),
-         Letter = "Field", 
+         Sample1 = case_when(Sample <= 29 ~ 1,
+                            Sample > 29 & Sample <= 59 ~ 2,
+                            Sample > 59 & Sample <= 89 ~ 3,
+                            Sample > 89 & Sample <= 119 ~ 4,
+                            Sample > 119 & Sample <= 149 ~ 5,
+                            Sample > 149 & Sample <= 179 ~ 6,
+                            Sample > 179 & Sample <= 209 ~ 7,
+                            Sample > 209 & Sample <= 239 ~ 8,
+                            Sample > 239 & Sample <= 269 ~ 9,
+                            Sample > 269 & Sample <= 299 ~ 10,
+                            Sample > 299 & Sample <= 329 ~ 11,
+                            Sample > 329 & Sample <= 359 ~ 12,
+                            Sample > 359 & Sample <= 389 ~ 13,
+                            Sample > 389 & Sample <= 419 ~ 14,
+                            Sample > 419 & Sample <= 449 ~ 15,
+                            Sample > 449 & Sample <= 479 ~ 16,
+                            Sample > 479 & Sample <= 509 ~ 17,
+                            Sample > 509 & Sample <= 539 ~ 18,
+                            Sample > 539 & Sample <= 569 ~ 19,
+                            Sample > 569 & Sample <= 609 ~ 20,
+                            T ~ Sample
+                            ),
+         Letter = case_when(Sample <= 9 ~ "A",
+                            Sample > 9 & Sample <= 19 ~ "B",
+                            Sample > 19 & Sample <= 29 ~ "C",
+                            Sample > 29 & Sample <= 39 ~ "A",
+                            Sample > 39 & Sample <= 49 ~ "B",
+                            Sample > 49 & Sample <= 59 ~ "C",
+                            Sample > 59 & Sample <= 69 ~ "A",
+                            Sample > 69 & Sample <= 79 ~ "B",
+                            Sample > 79 & Sample <= 89 ~ "C",
+                            Sample > 89 & Sample <= 99 ~ "A",
+                            Sample > 99 & Sample <= 109 ~ "B",
+                            Sample > 109 & Sample <= 119 ~ "C",
+                            Sample > 119 & Sample <= 129 ~ "A",
+                            Sample > 129 & Sample <= 139 ~ "B",
+                            Sample > 139 & Sample <= 149 ~ "C",
+                            Sample > 149 & Sample <= 159 ~ "A",
+                            Sample > 159 & Sample <= 169 ~ "B",
+                            Sample > 169 & Sample <= 179 ~ "C",
+                            Sample > 179 & Sample <= 189 ~ "A",
+                            Sample > 189 & Sample <= 199 ~ "B",
+                            Sample > 199 & Sample <= 209 ~ "C",
+                            Sample > 209 & Sample <= 219 ~ "A",
+                            Sample > 219 & Sample <= 229 ~ "B",
+                            Sample > 229 & Sample <= 239 ~ "C",
+                            Sample > 239 & Sample <= 249 ~ "A",
+                            Sample > 249 & Sample <= 259 ~ "B",
+                            Sample > 259 & Sample <= 269 ~ "C",
+                            Sample > 269 & Sample <= 279 ~ "A",
+                            Sample > 279 & Sample <= 289 ~ "B",
+                            Sample > 289 & Sample <= 299 ~ "C",
+                            Sample > 299 & Sample <= 309 ~ "A",
+                            Sample > 309 & Sample <= 319 ~ "B",
+                            Sample > 319 & Sample <= 329 ~ "C",
+                            Sample > 329 & Sample <= 339 ~ "A",
+                            Sample > 339 & Sample <= 349 ~ "B",
+                            Sample > 349 & Sample <= 359 ~ "C",
+                            Sample > 359 & Sample <= 369 ~ "A",
+                            Sample > 369 & Sample <= 379 ~ "B",
+                            Sample > 379 & Sample <= 389 ~ "C",
+                            Sample > 389 & Sample <= 399 ~ "A",
+                            Sample > 399 & Sample <= 409 ~ "B",
+                            Sample > 409 & Sample <= 419 ~ "C",
+                            Sample > 419 & Sample <= 429 ~ "A",
+                            Sample > 429 & Sample <= 439 ~ "B",
+                            Sample > 439 & Sample <= 449 ~ "C",
+                            Sample > 449 & Sample <= 459 ~ "A",
+                            Sample > 459 & Sample <= 469 ~ "B",
+                            Sample > 469 & Sample <= 479 ~ "C",
+                            Sample > 479 & Sample <= 489 ~ "A",
+                            Sample > 489 & Sample <= 499 ~ "B",
+                            Sample > 499 & Sample <= 509 ~ "C",
+                            Sample > 509 & Sample <= 519 ~ "A",
+                            Sample > 519 & Sample <= 529 ~ "B",
+                            Sample > 529 & Sample <= 539 ~ "C",
+                            Sample > 539 & Sample <= 549 ~ "A",
+                            Sample > 549 & Sample <= 559 ~ "B",
+                            Sample > 559 & Sample <= 569 ~ "C",
+                            Sample > 569 & Sample <= 579 ~ "A",
+                            Sample > 579 & Sample <= 589 ~ "B",
+                            Sample > 589 & Sample <= 599 ~ "C"),
          dataset_Name = "VIGO",
-         ID = paste0(dataset_Name,"_",Sample,"_",Letter)) %>% 
-  dplyr::select(-Spectra) %>% 
-  dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID)
+         ID = paste0(dataset_Name,"_",Sample1,"_",Letter)) %>%
+  group_by(ID,Wavelength) %>% 
+  reframe(mean_RAW = mean(mean_RAW),
+          Sample = Sample1,
+          Letter = Letter,
+          dataset_Name = dataset_Name) %>% 
+  ungroup() %>% 
+  group_by(ID) %>% 
+  mutate(mean_STD = (mean_RAW-min(mean_RAW))/(max(mean_RAW)-min(mean_RAW))) %>% 
+  ungroup() %>% 
+  dplyr::select(Wavelength,Sample,Letter,mean_STD,mean_RAW,dataset_Name,ID) 
 
-Vigo_df %>% 
-  ggplot(aes(x = Wavelength, y = mean_RAW, group = ID, color = ID))+
-  geom_line(show.legend = F)
 
+vigo_all <- df_Vigo_Field %>% 
+  bind_rows(Vigo_df_lab)
+
+write_csv(vigo_all, paste0("Output/",unique(vigo_all$dataset_Name),"_STD.csv"))
 ```
 
 
